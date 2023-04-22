@@ -15,6 +15,7 @@ Option::Option(Type type, double K, double T, double S, double r, double q)
 
 void Option::printProperties() const
 {
+    std::cout << '\n';
     std::cout << "Type: " << this->type << '\n';
     std::cout << "Strike: " <<  K << '\n';
     std::cout << "Time to expiry: " << T << " years\n";
@@ -26,8 +27,7 @@ void Option::printProperties() const
 
 inline double Option::getExerciseValue(double S_t) const
 {
-    switch(type)
-    {
+    switch(type) {
         case Option::call:      return std::max(0.0, S_t - K);
         case Option::put:       return std::max(0.0, K - S_t);
         default:                break;
@@ -48,23 +48,25 @@ void Option::printBinomialTree(double sigma, int N) const
     double p_up{ Option::getUpProb(sigma, N) };
     double p_down{ 1 - p_up };
 
-    for (int t{ 0 }; t <= N; ++t)
-    {
+    for (int t{ 0 }; t <= N; ++t) {
         std::cout << "Timestep " << t << ":\n";
         std::vector<double> binTreeLevel{ Option::getBinTreeLevel(sigma, N, t) };
 
-        for (const auto& node : binTreeLevel)
-        {
+        for (const auto& node : binTreeLevel) {
             std::cout << node << "\t\t";
         }
         std::cout << "\n\n";
     }
 }
 
+bool Option::checkEarlyExercise(double sigma, int N) const
+{
+    return false;
+}
+
 std::ostream& operator<<(std::ostream& out, const Option::Type& optType)
 {
-    switch(optType)
-    {
+    switch(optType) {
         case Option::call:      out << "Call";  return out;
         case Option::put:       out << "Put";   return out;
         default:                out << "???";   break;
@@ -93,12 +95,13 @@ inline std::vector<double> Option::getBinTreeLevel(double sigma, int N, int t, b
 
     std::vector<double> binTreeLevel(t + 1);
 
-    for (int node{ 0 }; node <= t; ++node)
-    {
-        if (!exercise)
+    for (int node{ 0 }; node <= t; ++node) {
+        if (!exercise) {
             binTreeLevel[node] = S * pow(up, node) * pow(down, t - node);
-        else
+        }
+        else {
             binTreeLevel[node] = Option::getExerciseValue(S * pow(up, node) * pow(down, t - node));
+        }
     }
 
     return binTreeLevel;
@@ -123,8 +126,7 @@ double European::getBinomialValue(double sigma, int N) const
     assert(down < 1 + r && 1 + r < up && "getBinomialValue(double, int) BOPM no arbitrage violated, d < r < u does not hold.");
     assert(0 <= p_up && p_up <= 1 && "getBinomialValue(double, int) BOPM probability not between 0 and 1, invalid inputs.");
 
-    for (int node{ 0 }; node <= N; ++node)
-    {
+    for (int node{ 0 }; node <= N; ++node) {
         double exerciseValue{ getExerciseValue(S * pow(up, node) * pow(down, N - node)) };
         optValue += exerciseValue
             * boost::math::binomial_coefficient<double>(N, node)
@@ -153,11 +155,9 @@ double American::getBinomialValue(double sigma, int N) const
     assert(down < 1 + r && 1 + r < up && "getBinomialValue(double, int) BOPM no arbitrage violated, d < r < u does not hold.");
     assert(0 <= p_up && p_up <= 1 && "getBinomialValue(double, int) BOPM probability not between 0 and 1, invalid inputs.");
 
-    if (type == call && q == 0.0)
-    {
+    if (type == call && q == 0.0) {
         // American call, no dividend == European call
-        for (int node{ 0 }; node <= N; ++node)
-        {
+        for (int node{ 0 }; node <= N; ++node) {
             double exerciseValue{ getExerciseValue(S * pow(up, node) * pow(down, N - node)) };
             optValue += exerciseValue
                 * boost::math::binomial_coefficient<double>(N, node)
@@ -165,18 +165,17 @@ double American::getBinomialValue(double sigma, int N) const
         }
         optValue /= pow(1 + r, N);
     }
-    else
-    {
+    else {
         std::vector<double> RNPrices{ Option::getBinTreeLevel(sigma, N, N, true) };
-        for (int t{ N }; t > 0; --t)
-        {
+        for (int t{ N }; t > 0; --t) {
             std::vector<double> BinTreeLevelPrev_ex{ Option::getBinTreeLevel(sigma, N, t - 1, true) };
-            for (int node{ 0 }; node < t; ++node)
-            {
+
+            for (int node{ 0 }; node < t; ++node) {
                 double exerciseDown{ (RNPrices[node]) };
                 double exerciseUp{ (RNPrices[node + 1]) };
                 RNPrices[node] = std::max((p_down * exerciseDown + p_up * exerciseUp) / (1 + r), BinTreeLevelPrev_ex[node]);
             }
+
         }
         optValue = RNPrices[0];
     }
@@ -195,6 +194,8 @@ bool American::checkEarlyExercise(double sigma, int N) const
 
     assert(down < 1 + r && 1 + r < up && "getBinomialValue(double, int) BOPM no arbitrage violated, d < r < u does not hold.");
     assert(0 <= p_up && p_up <= 1 && "getBinomialValue(double, int) BOPM probability not between 0 and 1, invalid inputs.");
+
+    std::cout << '\n';
 
     if (type == call && q == 0.0)
     {

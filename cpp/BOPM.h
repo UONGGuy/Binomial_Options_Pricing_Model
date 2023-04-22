@@ -27,6 +27,8 @@ public:
     virtual double getBinomialValue(double sigma, int N) const;
     // print BOPM to command line
     void printBinomialTree(double sigma, int N) const;
+    // check early exercise if optimal
+    virtual bool checkEarlyExercise(double sigma, int N) const;
     
     // overload operator<< to return option type
     friend std::ostream& operator<<(std::ostream& out, const Option::Type& optType);
@@ -63,7 +65,7 @@ public:
     American(Type type, double K, double T, double S, double r, double q=0.0);
 
     double getBinomialValue(double sigma, int N) const override;
-    bool checkEarlyExercise(double sigma, int N) const;
+    bool checkEarlyExercise(double sigma, int N) const override;
 };
 
 #endif
