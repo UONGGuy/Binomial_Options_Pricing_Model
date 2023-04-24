@@ -1,6 +1,6 @@
 # Binomial Options Pricing Model
 
-Created `BOPM\_tool` to price European and American options using the Cox-Ross-Rubenstein Binomial tree model.
+Created `BOPM_tool` to price European and American options using the Cox-Ross-Rubenstein Binomial tree model.
 
 Functionality includes:
 - Returning price valuation of European and American calls and puts.
