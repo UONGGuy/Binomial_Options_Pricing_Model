@@ -15,14 +15,13 @@ Option::Option(Type type, double K, double T, double S, double r, double q)
 
 void Option::printProperties() const
 {
-    std::cout << '\n';
     std::cout << "Type: " << this->type << '\n';
+    std::cout << "Style: " << this->style << '\n';
     std::cout << "Strike: " <<  K << '\n';
     std::cout << "Time to expiry: " << T << " years\n";
     std::cout << "Current spot price: " << S << '\n';
     std::cout << "Risk-free interest rate: " << r << '\n';
     std::cout << "Dividend yield: " <<  q << '\n';
-    std::cout << '\n';
 }
 
 inline double Option::getExerciseValue(double S_t) const
@@ -38,6 +37,8 @@ inline double Option::getExerciseValue(double S_t) const
 
 double Option::getBinomialValue(double sigma, int N) const
 {
+    std::cout << "Option base class function getBinomialValue(double, int) called, invalid value used.\n";
+
     return -1.0;
 }
 
@@ -61,6 +62,8 @@ void Option::printBinomialTree(double sigma, int N) const
 
 bool Option::checkEarlyExercise(double sigma, int N) const
 {
+    std::cout << "Option base class fnction checkEarlyExercise(sigma, int) const called, invalid value used.\n";
+
     return false;
 }
 
@@ -72,6 +75,17 @@ std::ostream& operator<<(std::ostream& out, const Option::Type& optType)
         default:                out << "???";   break;
     }
     assert(0 && "Output operator<< of Option::Type invalid input");
+    return out;
+}
+
+std::ostream& operator<<(std::ostream& out, const Option::Style& optStyle)
+{
+    switch(optStyle) {
+        case Option::EU:        out << "European";      return out;
+        case Option::US:        out << "American";      return out;
+        default:                out << "???";           break;
+    }
+    assert(0 && "Output operator<< of Option::Style invalid input");
     return out;
 }
 
@@ -113,7 +127,9 @@ inline std::vector<double> Option::getBinTreeLevel(double sigma, int N, int t, b
 
 European::European(Type type, double K, double T, double S, double r, double q)
     : Option(type, K, T, S, r, q)
-{}
+{
+    this->style = EU;
+}
 
 double European::getBinomialValue(double sigma, int N) const
 {
@@ -136,13 +152,21 @@ double European::getBinomialValue(double sigma, int N) const
     return optValue / pow(1 + r, N);
 }
 
+bool European::checkEarlyExercise(double sigma, int N) const
+{
+    std::cout << "Early exercise not optimal.\n";
+
+    return false;
+}
 /* 
  * American 
  */
 
 American::American(Type type, double K, double T, double S, double r, double q)
     : Option(type, K, T, S, r, q)
-{}
+{
+    this->style = US;
+}
 
 double American::getBinomialValue(double sigma, int N) const
 {
@@ -195,8 +219,6 @@ bool American::checkEarlyExercise(double sigma, int N) const
     assert(down < 1 + r && 1 + r < up && "getBinomialValue(double, int) BOPM no arbitrage violated, d < r < u does not hold.");
     assert(0 <= p_up && p_up <= 1 && "getBinomialValue(double, int) BOPM probability not between 0 and 1, invalid inputs.");
 
-    std::cout << '\n';
-
     if (type == call && q == 0.0)
     {
         std::cout << "Early exercise not optimal.\n";
@@ -227,6 +249,10 @@ bool American::checkEarlyExercise(double sigma, int N) const
             }
             std::cout << "\n\n";
         }
+    }
+
+    if (!earlyExercise) {
+        std::cout << "Early exercise not optimal.\n";
     }
 
     return earlyExercise;

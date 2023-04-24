@@ -15,6 +15,14 @@ public:
         max_opt_types
     };
 
+    // Option style
+    enum Style
+    {
+        EU,
+        US,
+        max_opt_styles
+    };
+
     // constructor
     Option(Type type, double K, double T, double S, double r, double q=0.0);
     
@@ -32,9 +40,12 @@ public:
     
     // overload operator<< to return option type
     friend std::ostream& operator<<(std::ostream& out, const Option::Type& optType);
+    // overload operator<< to return option style
+    friend std::ostream& operator<<(std::ostream& out, const Option::Style& optType);
 
 protected:
     Type type;          // call/put
+    Style style;        // option style
     double K;           // strike
     double T;           // time to expiration
     double S;           // spot price
@@ -56,6 +67,7 @@ public:
     European(Type type, double K, double T, double S, double r, double q=0.0);
 
     double getBinomialValue(double sigma, int N) const override;
+    bool checkEarlyExercise(double sigma, int N) const override;
 };
 
 class American: public Option 
