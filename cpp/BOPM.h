@@ -24,12 +24,12 @@ public:
     };
 
     // constructor
-    Option(Type type, double K, double T, double S, double r, double q=0.0);
+    Option(Type type, double K, double T, double S, double r, double c=0.0);
     
     // displays option properties
     void printProperties() const;
     // return exercise value of option given current price S_t 
-    double getExerciseValue(double S_t) const;
+    double getPayoffValue(double S_t) const;
     // return BOPM price given underlying volatility sigma and 
     // binomial tree depth N
     virtual double getBinomialValue(double sigma, int N) const;
@@ -38,6 +38,9 @@ public:
     // check early exercise if optimal
     virtual bool checkEarlyExercise(double sigma, int N) const;
     
+    // get option style
+    Style getStyle() const { return style; }
+
     // overload operator<< to return option type
     friend std::ostream& operator<<(std::ostream& out, const Option::Type& optType);
     // overload operator<< to return option style
@@ -50,7 +53,7 @@ protected:
     double T;           // time to expiration
     double S;           // spot price
     double r;           // risk-free interest rate
-    double q=0.0;           // dividend yield
+    double c=0.0;           // dividend yield
 
     // Calculate factor price increases by
     double getUpFactor(double sigma, int N) const;
@@ -64,17 +67,18 @@ class European: public Option
 {
 public:
     // constructor
-    European(Type type, double K, double T, double S, double r, double q=0.0);
+    European(Type type, double K, double T, double S, double r, double c=0.0);
 
     double getBinomialValue(double sigma, int N) const override;
     bool checkEarlyExercise(double sigma, int N) const override;
+    double getBlackScholesValue(double sigma) const;
 };
 
 class American: public Option 
 {
 public:
     // constructor
-    American(Type type, double K, double T, double S, double r, double q=0.0);
+    American(Type type, double K, double T, double S, double r, double c=0.0);
 
     double getBinomialValue(double sigma, int N) const override;
     bool checkEarlyExercise(double sigma, int N) const override;

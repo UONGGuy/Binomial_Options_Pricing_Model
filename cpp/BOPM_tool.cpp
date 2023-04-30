@@ -1,6 +1,5 @@
 #include "BOPM.h"
 #include <boost/algorithm/string/erase.hpp>
-#include <boost/concept_check.hpp>
 #include <iostream>
 #include <limits>
 #include <string>
@@ -61,13 +60,13 @@ T getValue()
     return value;
 }
 
-struct AddModelParams
+struct ModelParams_BS
 {
     double sigma;
     int N;
 };
 
-int Menu(Option* option)
+int getMenu(Option* option)
 {
     int action{};
 
@@ -85,7 +84,7 @@ int Menu(Option* option)
     }
     while (action < 0 || action > 4 || std::cin.fail());
 
-    AddModelParams params;
+    ModelParams_BS params;
 
     switch(action) {
         case 1:
@@ -158,7 +157,7 @@ int main()
         European option(optType, K, T, S, r, q);
 
         while (action) {
-            action = Menu(&option);
+            action = getMenu(&option);
         }
 
         return 0;        
@@ -167,7 +166,7 @@ int main()
         American option(optType, K, T, S, r, q);
 
         while (action) {
-            action = Menu(&option);
+            action = getMenu(&option);
         }
 
         return 0;        

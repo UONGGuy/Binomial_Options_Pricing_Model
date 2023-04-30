@@ -1,5 +1,7 @@
 #include "BOPM.h"
 #include <boost/math/special_functions/binomial.hpp>
+#include <boost/math/special_functions/erf.hpp>
+#include <boost/math/special_functions/math_fwd.hpp>
 #include <cassert>
 #include <cmath>
 #include <iostream>
@@ -9,8 +11,8 @@
  * Option base class 
  */
 
-Option::Option(Type type, double K, double T, double S, double r, double q)
-    : type{ type }, K{ K }, T{ T }, S{ S }, r{ r }, q{ q }
+Option::Option(Type type, double K, double T, double S, double r, double c)
+    : type{ type }, K{ K }, T{ T }, S{ S }, r{ r }, c{ c }
 {}
 
 void Option::printProperties() const
@@ -21,17 +23,17 @@ void Option::printProperties() const
     std::cout << "Time to expiry: " << T << " years\n";
     std::cout << "Current spot price: " << S << '\n';
     std::cout << "Risk-free interest rate: " << r << '\n';
-    std::cout << "Dividend yield: " <<  q << '\n';
+    std::cout << "Dividend yield: " <<  c << '\n';
 }
 
-inline double Option::getExerciseValue(double S_t) const
+inline double Option::getPayoffValue(double S_t) const
 {
     switch(type) {
         case Option::call:      return std::max(0.0, S_t - K);
         case Option::put:       return std::max(0.0, K - S_t);
         default:                break;
     }
-    assert(0 && "Option::getExerciseValue(double) invalid Option type (call/put)");
+    assert(0 && "Option::getPayoffValue(double) invalid Option type (call/put)");
     return -1.0;
 }
 
@@ -98,8 +100,8 @@ inline double Option::getUpProb(double sigma, int N) const
 {
     double up{ Option::getUpFactor(sigma, N) };
     double down{ 1 / up };
-//    return (exp((r - q) * T / N) - down) / (up - down);
-    return ((1 + r - down - q) / (up - down));
+//    return (exp((r - c) * T / N) - down) / (up - down);
+    return ((1 + r - down - c) / (up - down));
 }
 
 inline std::vector<double> Option::getBinTreeLevel(double sigma, int N, int t, bool exercise) const
@@ -114,7 +116,7 @@ inline std::vector<double> Option::getBinTreeLevel(double sigma, int N, int t, b
             binTreeLevel[node] = S * pow(up, node) * pow(down, t - node);
         }
         else {
-            binTreeLevel[node] = Option::getExerciseValue(S * pow(up, node) * pow(down, t - node));
+            binTreeLevel[node] = Option::getPayoffValue(S * pow(up, node) * pow(down, t - node));
         }
     }
 
@@ -125,8 +127,8 @@ inline std::vector<double> Option::getBinTreeLevel(double sigma, int N, int t, b
  * European
  */
 
-European::European(Type type, double K, double T, double S, double r, double q)
-    : Option(type, K, T, S, r, q)
+European::European(Type type, double K, double T, double S, double r, double c)
+    : Option(type, K, T, S, r, c)
 {
     this->style = EU;
 }
@@ -143,7 +145,7 @@ double European::getBinomialValue(double sigma, int N) const
     assert(0 <= p_up && p_up <= 1 && "getBinomialValue(double, int) BOPM probability not between 0 and 1, invalid inputs.");
 
     for (int node{ 0 }; node <= N; ++node) {
-        double exerciseValue{ getExerciseValue(S * pow(up, node) * pow(down, N - node)) };
+        double exerciseValue{ getPayoffValue(S * pow(up, node) * pow(down, N - node)) };
         optValue += exerciseValue
             * boost::math::binomial_coefficient<double>(N, node)
             * pow(p_up, node) * pow(p_down, N - node);
@@ -158,12 +160,30 @@ bool European::checkEarlyExercise(double sigma, int N) const
 
     return false;
 }
+
+double European::getBlackScholesValue(double sigma) const
+{
+    double d1 = (log(S / K) + (r - c + pow(sigma, 2) / 2) * T) / (sigma * sqrt(T));
+    double d2 = d1 - sigma * sqrt(T);
+
+    // N(d) = P(N(0, 1) <= d) by calculating normal CDF
+    double N1 = 0.5 * boost::math::erfc(-(d1 - 0) / (1 * sqrt(2)));
+    double N2 = 0.5 * boost::math::erfc(-(d2 - 0) / (1 * sqrt(2)));
+    
+    double C0 = S * exp(-c * T) * N1 - K * exp(-r * T) * N2;
+
+    if (type == Option::Type::call) {
+        return C0;
+    }
+    return C0 + K * exp(-r * T) - S * exp(-c * T);
+}
+
 /* 
  * American 
  */
 
-American::American(Type type, double K, double T, double S, double r, double q)
-    : Option(type, K, T, S, r, q)
+American::American(Type type, double K, double T, double S, double r, double c)
+    : Option(type, K, T, S, r, c)
 {
     this->style = US;
 }
@@ -179,10 +199,10 @@ double American::getBinomialValue(double sigma, int N) const
     assert(down < 1 + r && 1 + r < up && "getBinomialValue(double, int) BOPM no arbitrage violated, d < r < u does not hold.");
     assert(0 <= p_up && p_up <= 1 && "getBinomialValue(double, int) BOPM probability not between 0 and 1, invalid inputs.");
 
-    if (type == call && q == 0.0) {
+    if (type == call && c == 0.0) {
         // American call, no dividend == European call
         for (int node{ 0 }; node <= N; ++node) {
-            double exerciseValue{ getExerciseValue(S * pow(up, node) * pow(down, N - node)) };
+            double exerciseValue{ getPayoffValue(S * pow(up, node) * pow(down, N - node)) };
             optValue += exerciseValue
                 * boost::math::binomial_coefficient<double>(N, node)
                 * pow(p_up, node) * pow(p_down, N - node);
@@ -219,7 +239,7 @@ bool American::checkEarlyExercise(double sigma, int N) const
     assert(down < 1 + r && 1 + r < up && "getBinomialValue(double, int) BOPM no arbitrage violated, d < r < u does not hold.");
     assert(0 <= p_up && p_up <= 1 && "getBinomialValue(double, int) BOPM probability not between 0 and 1, invalid inputs.");
 
-    if (type == call && q == 0.0)
+    if (type == call && c == 0.0)
     {
         std::cout << "Early exercise not optimal.\n";
     }
