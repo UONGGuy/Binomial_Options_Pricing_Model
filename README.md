@@ -7,5 +7,7 @@ Functionality includes:
 - Printing option properties to terminal.
 - Printing binomial tree model prices per time-step to terminal.
 - Checking and displaying nodes for early exercise.
+- Returning Black-Scholes price valuation of European options
 
-See `.h` and `.cpp` files in cpp folder.
+
+Accompanying iPython notebook `Options_Data_API.ipynb` to web scrape data to calculate historical volatility and risk-free rate for an example option.
